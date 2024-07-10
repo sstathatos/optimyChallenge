@@ -103,6 +103,8 @@ Resources:
       TaskDefinition: !Ref MySQLTaskDefinition
       DesiredCount: 1
       LaunchType: FARGATE
+      ServiceRegistries:
+        - RegistryArn: !GetAtt MySQLServiceDiscoveryService.Arn
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -121,7 +123,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          CidrIp: 0.0.0.0/0
 
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
@@ -137,6 +139,38 @@ Resources:
               - sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  MyServiceNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: myservicediscovery.local
+      Vpc: !Ref VPC
+
+
+  MyAppServiceDiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: app
+      NamespaceId: !Ref MyServiceNamespace
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: A
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  MySQLServiceDiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: mysql
+      NamespaceId: !Ref MyServiceNamespace
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: A
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
 
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -156,7 +190,7 @@ Resources:
             - ContainerPort: 80
           Environment:
             - Name: DB_HOST
-              Value: arn:aws:ecs:us-east-1:730335409690:service/ecs-php-mysql-ECSCluster-djp7J8TYIJhQ/mysql-service
+              Value: !Sub "${MySQLService.DiscoveryName}.${MyServiceNamespace.NamespaceName}"
             - Name: DB_USER
               Value: !Ref DBUser
             - Name: DB_PASS
@@ -181,6 +215,8 @@ Resources:
             - !Ref PublicSubnet2
           SecurityGroups:
             - !Ref ECSSecurityGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt MyAppServiceDiscoveryService.Arn
       LoadBalancers:
         - ContainerName: php-app
           ContainerPort: 80
@@ -195,7 +231,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          CidrIp: 0.0.0.0/0
 
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
