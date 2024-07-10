@@ -73,6 +73,56 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
 
+  MySQLTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: mysql-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+      TaskRoleArn: !Ref ECSTaskExecutionRole
+      ContainerDefinitions:
+        - Name: mysql
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-db:latest
+          PortMappings:
+            - ContainerPort: 3306
+          Environment:
+            - Name: MYSQL_ROOT_PASSWORD
+              Value: !Ref DBPassword
+            - Name: MYSQL_DATABASE
+              Value: !Ref DBName
+
+  MySQLService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: mysql-service
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref MySQLTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !Ref MySQLSecurityGroup
+
+  MySQLSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for MySQL
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -106,7 +156,7 @@ Resources:
             - ContainerPort: 80
           Environment:
             - Name: DB_HOST
-              Value: !GetAtt RDSInstance.Endpoint.Address
+              Value: arn:aws:ecs:us-east-1:730335409690:service/ecs-php-mysql-ECSCluster-djp7J8TYIJhQ/mysql-service
             - Name: DB_USER
               Value: !Ref DBUser
             - Name: DB_PASS
@@ -146,39 +196,6 @@ Resources:
           FromPort: 80
           ToPort: 80
           SourceSecurityGroupId: !Ref ALBSecurityGroup
-
-  RDSInstance:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      DBName: !Ref DBName
-      Engine: mysql
-      MasterUsername: !Ref DBUser
-      MasterUserPassword: !Ref DBPassword
-      DBInstanceClass: db.t3.micro
-      AllocatedStorage: 20
-      PubliclyAccessible: true
-      VPCSecurityGroups:
-        - !Ref RDSSecurityGroup
-      DBSubnetGroupName: !Ref RDSSubnetGroup
-
-  RDSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for RDS
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
-
-  RDSSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Subnet group for RDS
-      SubnetIds:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
 
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer

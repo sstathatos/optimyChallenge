@@ -1,9 +1,9 @@
 source .env
-docker build -t optimy-app .
+docker build -t optimy-app src/php/
 docker tag optimy-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/optimy-app:latest
 docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/optimy-app:latest
 
-docker pull mysql:9.0.0 
-docker tag mysql:9.0.0 $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/optimy-db:latest
+docker build -t optimy-db src/mysql/
+docker tag optimy-db:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/optimy-db:latest
 docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/optimy-db:latest
 
