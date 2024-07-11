@@ -4,24 +4,32 @@ Description: Deploy Docker containers from ECR to EC2
 Parameters:
   dbpass:
     Type: String
-    Default: rootpassword
   dbname:
     Type: String
-    Default: testdb
   dbhost:
     Type: String
-    Default: optimy-db
   dbuser:
     Type: String
-    Default: root
+  ImageId:
+    Description: The AMI ID for the EC2 instance
+    Type: AWS::EC2::Image::Id
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: String
+  SubnetId:
+    Description: Subnet ID for the EC2 instance
+    Type: AWS::EC2::Subnet::Id
+  VpcId:
+    Description: VPC ID for the security group
+    Type: AWS::EC2::VPC::Id
 
 Resources:
   MyEC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties: 
       InstanceType: t2.medium
-      KeyName: work-private  # Replace with your key pair name
-      ImageId: ami-06c68f701d8090592
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
       IamInstanceProfile: 
         Ref: EC2InstanceProfile
       UserData: 
@@ -45,7 +53,7 @@ Resources:
       NetworkInterfaces: 
         - AssociatePublicIpAddress: 'true'
           DeviceIndex: '0'
-          SubnetId: subnet-05b48d2b722dcdc90  # Replace with your subnet ID
+          SubnetId: !Ref SubnetId
           GroupSet: 
             - Ref: MySecurityGroup
 
@@ -53,7 +61,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties: 
       GroupDescription: Allow SSH and HTTP
-      VpcId: vpc-0f905afcd9ffedc5d # Replace with your VPC ID
+      VpcId: !Ref VpcId
       SecurityGroupIngress: 
         - IpProtocol: tcp
           FromPort: '22'
