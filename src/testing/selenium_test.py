@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 import os
 
 def run_test():
-    base_url = os.getenv("BASE_URL", "http://optimy-app:8080")
+    base_url = os.getenv("BASE_URL", "http://optimy-app:80")
     
     # Set up Selenium with headless Chrome
     chrome_options = Options()
