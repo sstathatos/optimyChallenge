@@ -15,15 +15,24 @@ DB_NAME=
 ```
 aws ecr create-repository --repository-name optimy-app
 aws ecr create-repository --repository-name optimy-db
+aws ecr create-repository --repository-name optimy-testing
+aws ecr create-repository --repository-name optimy-prometheus
+aws ecr create-repository --repository-name optimy-grafana
 ```
 
 ## Deploy images
 ```
 aws ecr get-login-password | docker login --username AWS --password-stdin <acc_id>.dkr.ecr.<region>.amazonaws.com
-bash deploy_images
+bash deploy_images.sh
 ```
 
 ## Deploy CloudFormation stack
 ```
 aws cloudformation create-stack --stack-name optimy --template-body file://cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM --parameters ParameterKey=<some_key>,ParameterValue=<some_value> .. 
 ```
+
+## Printscreens
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
+![alt text](image-3.png)

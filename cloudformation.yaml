@@ -45,11 +45,16 @@ Resources:
           docker pull ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-db:latest
           docker pull ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-app:latest
           docker pull ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-testing:latest
+          docker pull ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-grafana:latest
+          docker pull ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-prometheus:latest
+          
           docker network create optimynetwork
           docker run -d --name optimy-db --network optimynetwork -p 3306:3306 -e MYSQL_ROOT_PASSWORD=${dbpass} -e MYSQL_DATABASE=${dbname} ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-db:latest
           docker run -d --name optimy-app --network optimynetwork -p 8080:80 -e DB_HOST=${dbhost} -e DB_USER=${dbuser} -e DB_PASS=${dbpass} -e DB_NAME=${dbname} ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-app:latest
           sleep 30
           docker run -d --name optimy-testing --network optimynetwork -p 8089:8089 -e BASE_URL=http://optimy-app:80 ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-testing:latest
+          docker run -d --name optimy-grafana --network optimynetwork -p 3000:3000 ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-grafana:latest
+          docker run -d --name optimy-prometheus --network optimynetwork -p 9090:9090 ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/optimy-prometheus:latest
       NetworkInterfaces: 
         - AssociatePublicIpAddress: 'true'
           DeviceIndex: '0'
@@ -70,6 +75,14 @@ Resources:
         - IpProtocol: tcp
           FromPort: '80'
           ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '3000'
+          ToPort: '3000'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '9090'
+          ToPort: '9090'
           CidrIp: 0.0.0.0/0
 
   EC2InstanceProfile:
@@ -111,3 +124,6 @@ Outputs:
   PublicIP:
     Description: The Public IP address of the EC2 instance
     Value: !GetAtt MyEC2Instance.PublicIp
+  GrafanaURL:
+    Description: The URL to access Grafana
+    Value: !Sub 'http://${MyEC2Instance.PublicIp}:3000'
